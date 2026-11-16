@@ -1,12 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BSNOBROCK ファンマップ</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BSNOBROCK ファンマップ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#263247;font-family:system-ui,sans-serif}
+header{background:white;padding:22px;border-bottom:1px solid #e2e7ef}h1{margin:0 0 6px;font-size:26px}
+header p,.muted{color:#68758b;font-size:14px}.wrap{max-width:1180px;margin:auto;padding:0 16px}
+.note{margin:14px 0;padding:12px;background:#fff5d9;border-radius:9px;font-size:13px}
+.controls{display:flex;gap:10px;margin:14px 0;flex-wrap:wrap}input,select{padding:11px;border:1px solid #ccd5e3;border-radius:8px;font:inherit;background:white}
+input{flex:1;min-width:190px}.layout{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:24px}
+#map{height:600px;border-radius:12px;border:1px solid #e2e7ef}.panel{background:white;border:1px solid #e2e7ef;border-radius:12px;overflow:hidden}
+.panelhead{padding:14px;border-bottom:1px solid #e2e7ef;display:flex;justify-content:space-between}
+#list{max-height:550px;overflow:auto}.spot{display:block;width:100%;padding:14px;text-align:left;background:white;border:0;border-bottom:1px solid #e2e7ef;cursor:pointer;color:inherit}
+.spot:hover{background:#f1f5ff}.spot strong,.spot small{display:block}.spot small{color:#68758b;margin-top:4px}
+.tag{display:inline-block;margin-top:7px;padding:2px 8px;border-radius:20px;background:#edf2ff;color:#315ca7;font-size:11px}
+footer{text-align:center;color:#68758b;font-size:12px;padding:10px 16px 25px}
+@media(max-width:760px){.layout{display:flex;flex-direction:column}#map{height:48vh;min-height:330px}#list{max-height:350px}}
+</style>
 </head>
 <body>
-  <h1>BSNOBROCK ファンマップ</h1>
-  <p>ファンスポットを紹介する地図サイトです。</p>
-</body>
-</html>
+<header><div class="wrap"><h1>BSNOBROCK ファンマップ</h1><p>ファンスポットを地図と一覧から探せる非公式ファンマップ</p></div></header>
+<main class="wrap">
+<div class="note">※ 非公式のファン制作ページです。現在の掲載情報はサンプルです。実際のスポット情報に差し替えてください。</div>
+<div class="controls"><input id="search" placeholder="スポット名・住所・メモで検索"><select id="area"><option value="">すべての地域</option></select></div>
+<div class="layout"><div id="map"></div><section class="panel"><div class="panelhead"><strong>スポット一覧</strong><span id="count" class="muted"></span></div><div id="list"></div></section></div>
+</main>
+<footer>地図データ © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors</footer>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ▼スポット情報はこの配列に追加します。lat=緯度、lng=経度です。
+const spots=[
+{name:"サンプルスポット（東京）",area:"関東",address:"東京都千代田区",lat:35.6812,lng:139.7671,category:"サンプル",memo:"ここを実際の情報に変更してください。"},
+{name:"サンプルスポット（大阪）",area:"関西",address:"大阪府大阪市",lat:34.7025,lng:135.4959,category:"サンプル",memo:"不要なサンプルは削除できます。"},
+{name:"サンプルスポット（福岡）",area:"九州",address:"福岡県福岡市",lat:33.5902,lng:130.4017,category:"サンプル",memo:"スポット名・住所・メモを編集できます。"}
+];
+const map=L.map("map").setView([36.2,138.2],5);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+const entries=spots.map(s=>({spot:s,marker:L.marker([s.lat,s.lng]).addTo(map).bindPopup(`<b>${esc(s.name)}</b><br>${esc(s.address)}<br>${esc(s.memo)}`)}));
+const search=document.getElementById("search"),area=document.getElementById("area"),list=document.getElementById("list");
+[...new Set(spots.map(s=>s.area))].sort().forEach(a=>{let o=document.createElement("option");o.value=a;o.textContent=a;area.appendChild(o)});
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function render(){let q=search.value.trim().toLowerCase(),a=area.value;let found=entries.filter(({spot:s})=>(!q||[s.name,s.area,s.address,s.category,s.memo].join(" ").toLowerCase().includes(q))&&(!a||s.area===a));list.innerHTML="";document.getElementById("count").textContent=found.length+"件";
+if(!found.length){list.textContent="該当するスポットがありません。";return}
+found.forEach(({spot:s,marker:m})=>{let b=document.createElement("button");b.className="spot";b.innerHTML=`<strong>${esc(s.name)}</strong><small>${esc(s.area)} ／ ${esc(s.address)}</small><span class="tag">${esc(s.category)}</span>`;b.onclick=()=>{map.setView(m.getLatLng(),14);m.openPopup();if(innerWidth<760)document.getElementById("map").scrollIntoView({behavior:"smooth"})};list.appendChild(b)})}
+search.addEventListener("input",render);area.addEventListener("change",render);render();
+</script>
+</body></html>
